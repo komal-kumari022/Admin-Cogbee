@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 // Added onQuestionCreate prop
-const CreateQuestionModal = ({ onClose, onQuestionCreate }) => { 
+const CreateQuestionModal = ({ onClose, onQuestionCreate, initialQuestionData = null, fullPage = false }) => {
     
     // State to hold the question form data
     const [formData, setFormData] = useState({
@@ -34,6 +34,16 @@ const CreateQuestionModal = ({ onClose, onQuestionCreate }) => {
         setOptions(prev => [...prev, { id: newId, text: `Option ${prev.length + 1}`, score: 0 }]);
     };
 
+    // Update option text value
+    const handleOptionTextChange = (id, newText) => {
+        setOptions(prev => prev.map(o => o.id === id ? { ...o, text: newText } : o));
+    };
+
+    // Update option score value
+    const handleOptionScoreChange = (id, newScore) => {
+        setOptions(prev => prev.map(o => o.id === id ? { ...o, score: Number(newScore) } : o));
+    };
+
     const handleRemoveOption = (idToRemove) => {
         setOptions(prev => prev.filter(option => option.id !== idToRemove));
     };
@@ -46,8 +56,10 @@ const CreateQuestionModal = ({ onClose, onQuestionCreate }) => {
             return;
         }
 
-        // 2. Construct the new question object 
+        // 2. Construct the new question object  
         const newQuestion = {
+            // Preserve id when editing
+            ...(initialQuestionData && initialQuestionData.id ? { id: initialQuestionData.id } : {}),
             questionName: formData.questionName,
             questionType: formData.questionType,
             difficulty: formData.difficulty,
@@ -58,40 +70,95 @@ const CreateQuestionModal = ({ onClose, onQuestionCreate }) => {
         };
         
         // 3. Call the callback function from the parent
-        onQuestionCreate(newQuestion); 
+        onQuestionCreate(newQuestion);  
         
         // onClose() is called inside onQuestionCreate, but you can keep it here as fallback
-        // onClose(); 
+        // onClose();  
     };
     // ------------------------------------
+
+    // Populate or reset form when initialQuestionData changes
+    React.useEffect(() => {
+        if (initialQuestionData) {
+            setFormData(prev => ({
+                ...prev,
+                questionName: initialQuestionData.questionName || '',
+                questionType: initialQuestionData.questionType || prev.questionType,
+                difficulty: initialQuestionData.difficulty || prev.difficulty,
+                questionScore: initialQuestionData.questionScore ?? prev.questionScore,
+                solution: initialQuestionData.solution || ''
+            }));
+
+            if (initialQuestionData.options && Array.isArray(initialQuestionData.options) && initialQuestionData.options.length > 0) {
+                const normalized = initialQuestionData.options.map((opt, idx) => ({
+                    id: opt.id ?? idx + 1,
+                    text: opt.text ?? `Option ${idx + 1}`,
+                    score: opt.score ?? 0
+                }));
+                setOptions(normalized);
+            }
+
+            setShowSolution(!!initialQuestionData.solution);
+        } else {
+            // Reset to defaults when creating new question
+            setFormData({
+                questionName: '',
+                tags: [],
+                questionType: 'Multiple Choice',
+                difficulty: 'Medium',
+                questionScore: 10,
+                solution: ''
+            });
+            setOptions([
+                { id: 1, text: 'Option 1', score: 0 },
+                { id: 2, text: 'Option 2', score: 0 },
+            ]);
+            setShowSolution(false);
+        }
+    }, [initialQuestionData]);
 
     // Helper to determine the input type based on scoring method
     const isOptionLevel = selectedScoring === 'Option-Level Scoring';
 
+    // wrapper + container classes depend on `fullPage`
+    const wrapperClass = fullPage
+        ? 'min-h-screen bg-gray-50 w-full'
+        : 'fixed inset-0 z-50 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center';
+
+    const containerClass = fullPage
+        ? 'relative bg-white w-full h-full p-6 max-h-none overflow-y-auto'
+        : 'relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-auto my-10 p-6 max-h-[90vh] overflow-y-auto';
+
     return (
-        // Modal Backdrop
-        <div className="fixed inset-0 z-50 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center">
-            
-            {/* Modal Content */}
-            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-auto my-10 p-6 max-h-[90vh] overflow-y-auto">
+        // Modal Backdrop or full-page wrapper
+        <div className={wrapperClass}>
+            {/* Modal Content / Full page content */}
+            <div className={containerClass}>
                 
-                {/* Modal Header */}
+                {/* Modal/Header */}
                 <div className="flex justify-between items-center pb-3 border-b border-gray-200 mb-4 sticky top-0 bg-white z-10">
-                    <div className="flex flex-col">
-                        <h3 className="text-lg font-semibold text-gray-900">Create New Question</h3>
-                        <p className="text-sm text-gray-500">Add a new question to your quiz or assessment.</p>
+                    <div className="flex items-center">
+                        <div className="mr-4" />
+                        <div className="flex flex-col">
+                            <h3 className="text-lg font-semibold text-gray-900">{initialQuestionData ? 'Edit Question' : 'Create New Question'}</h3>
+                            <p className="text-sm text-gray-500">{initialQuestionData ? 'Update the question details.' : 'Add a new question to your quiz or assessment.'}</p>
+                        </div>
                     </div>
-                    {/* Close Button (X icon) */}
-                    <button 
-                        onClick={onClose} 
-                        className="text-gray-400 hover:text-gray-600 transition"
-                    >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
+
+                    <div>
+                        <button 
+                            onClick={onClose} 
+                            className="text-gray-400 hover:text-gray-600 transition p-1 rounded-full"
+                            aria-label="Close"
+                            title="Close"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Modal Body: Form Fields */}
-                <div className="space-y-4 pb-4"> 
+                <div className="space-y-4 pb-4">  
                     
                     {/* Question Name */}
                     <div>
@@ -195,7 +262,7 @@ const CreateQuestionModal = ({ onClose, onQuestionCreate }) => {
                         )}
                         
                         {/* List of Options (You'll need more complex logic to handle option text and score changes in a real app, but the structure is here) */}
-                        <div className="space-y-2"> 
+                        <div className="space-y-2">  
                             {options.map((option) => (
                                 <div key={option.id} className="flex items-center bg-white border border-gray-200 rounded-md">
                                     
@@ -213,7 +280,8 @@ const CreateQuestionModal = ({ onClose, onQuestionCreate }) => {
                                     {/* 2. Option Input Field */}
                                     <input 
                                         type="text" 
-                                        defaultValue={option.text} // Use defaultValue for simplicity here, but a real app should use value and onChange
+                                        value={option.text}
+                                        onChange={(e) => handleOptionTextChange(option.id, e.target.value)}
                                         placeholder={`Enter Option ${options.findIndex(o => o.id === option.id) + 1}`}
                                         className="ml-2 block w-full p-1 text-sm border-none focus:ring-0"
                                     />
@@ -222,7 +290,8 @@ const CreateQuestionModal = ({ onClose, onQuestionCreate }) => {
                                     {isOptionLevel && (
                                         <input
                                             type="number"
-                                            defaultValue={option.score}
+                                            value={option.score}
+                                            onChange={(e) => handleOptionScoreChange(option.id, e.target.value)}
                                             placeholder="Score"
                                             className="w-16 p-1 text-sm text-center border-l border-gray-200 focus:ring-0"
                                         />
@@ -278,7 +347,7 @@ const CreateQuestionModal = ({ onClose, onQuestionCreate }) => {
                     )}
                 </div>
 
-                {/* Modal Footer: Action Buttons */}
+                {/* Modal Footer: Action Buttons (always shown, aligned to right-bottom) */}
                 <div className="flex justify-end space-x-3 pt-4 mt-4 border-t border-gray-200 sticky bottom-0 bg-white z-10">
                     <button 
                         onClick={onClose} 
@@ -287,10 +356,10 @@ const CreateQuestionModal = ({ onClose, onQuestionCreate }) => {
                         Cancel
                     </button>
                     <button 
-                        onClick={handleCreateQuestion} // Calls the new logic
+                        onClick={handleCreateQuestion}
                         className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
                     >
-                        Create Question
+                        {initialQuestionData ? 'Update Question' : 'Create Question'}
                     </button>
                 </div>
             </div>

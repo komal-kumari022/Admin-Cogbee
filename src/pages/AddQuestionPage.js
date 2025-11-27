@@ -36,6 +36,8 @@ const AddQuestionPage = ({ skillName = 'js.java', onBack = () => alert('Back cli
     const [currentView, setCurrentView] = useState('default');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [editingQuestion, setEditingQuestion] = useState(null);
+    // When true, the create form will render as a full-page view instead of a centered popup
+    const [modalFullPage, setModalFullPage] = useState(false);
     
     // ⭐ NEW STATE: Stores questions added to the right panel (the test)
     const [selectedQuestions, setSelectedQuestions] = useState([]);
@@ -78,16 +80,21 @@ const AddQuestionPage = ({ skillName = 'js.java', onBack = () => alert('Back cli
     // --- CRUD Handlers (Existing, with minor update for selection) ---
     const handleEditQuestion = (question) => {
         setEditingQuestion(question);
+        // Open edit in full-page mode as requested
+        setModalFullPage(true);
         setShowCreateModal(true);
     };
 
     const closeCreateModal = () => {
         setEditingQuestion(null); 
         setShowCreateModal(false);
+        setModalFullPage(false);
     };
 
     const openCreateModal = () => {
         setEditingQuestion(null);
+        // When creating new, open as full-page
+        setModalFullPage(true);
         setShowCreateModal(true);
     };
 
@@ -293,6 +300,17 @@ const SelectedQuestionItem = ({ question }) => (
     };
 
 
+    if (showCreateModal && modalFullPage) {
+        return (
+            <CreateQuestionModal 
+                onClose={closeCreateModal} 
+                onQuestionCreate={handleQuestionCreatedOrUpdated} 
+                initialQuestionData={editingQuestion}
+                fullPage={true}
+            />
+        );
+    }
+
     return (
         <div className="p-8 bg-gray-50 min-h-screen">
             <div className="flex justify-between items-center mb-6 border-b pb-4">
@@ -356,7 +374,8 @@ const SelectedQuestionItem = ({ question }) => (
                 <CreateQuestionModal 
                     onClose={closeCreateModal} 
                     onQuestionCreate={handleQuestionCreatedOrUpdated} 
-                    initialQuestionData={editingQuestion} 
+                    initialQuestionData={editingQuestion}
+                    fullPage={modalFullPage}
                 />
             )}
         </div>

@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import SkillModal from "./SkillModal";
+import CreateQuestionModal from "./CreateQuestionModal";
 
 // --- TestQuestions Component ---
 export default function TestQuestions({ setSelectedSkill, setActiveView }) {
 
   // Modal open/close state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState(null);
 
   const handleAddQuestions = () => {
     setIsModalOpen(true);
@@ -13,6 +16,32 @@ export default function TestQuestions({ setSelectedSkill, setActiveView }) {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+  };
+
+  const openCreateModalForEdit = (question) => {
+    setEditingQuestion(question);
+    setShowCreateModal(true);
+  };
+
+  const closeCreateModal = () => {
+    setEditingQuestion(null);
+    setShowCreateModal(false);
+  };
+
+  const handleQuestionCreatedOrUpdated = (updatedQuestion) => {
+    if (updatedQuestion.id) {
+      // update existing
+      const updated = savedQuestions.map(q => (q.id === updatedQuestion.id ? updatedQuestion : q));
+      setSavedQuestions(updated);
+      localStorage.setItem('savedQuestions', JSON.stringify(updated));
+    } else {
+      // create new
+      const withId = { ...updatedQuestion, id: Date.now() };
+      const updated = [withId, ...savedQuestions];
+      setSavedQuestions(updated);
+      localStorage.setItem('savedQuestions', JSON.stringify(updated));
+    }
+    closeCreateModal();
   };
 
   // saved questions loaded from localStorage
@@ -93,7 +122,7 @@ export default function TestQuestions({ setSelectedSkill, setActiveView }) {
 
                 <div className="flex items-center space-x-3">
                   <div className="bg-gray-100 px-3 py-1 rounded text-sm">Points: {q.questionScore}</div>
-                  <button title="Edit" className="text-blue-600 hover:text-blue-800 p-1">
+                  <button title="Edit" onClick={() => openCreateModalForEdit(q)} className="text-blue-600 hover:text-blue-800 p-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                   </button>
                   <button title="Delete" onClick={() => {
@@ -119,6 +148,15 @@ export default function TestQuestions({ setSelectedSkill, setActiveView }) {
           setActiveView("addQuestion");  // navigate to addQuestionPage
         }}
       />
+
+      {/* Create / Edit Question Modal for TestQuestions list */}
+      {showCreateModal && (
+        <CreateQuestionModal
+          onClose={closeCreateModal}
+          onQuestionCreate={handleQuestionCreatedOrUpdated}
+          initialQuestionData={editingQuestion}
+        />
+      )}
 
     </div>
   );
