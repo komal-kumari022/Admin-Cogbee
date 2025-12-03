@@ -5,7 +5,8 @@ import {
   FlaskConical,
   ClipboardList,
 //   Clock, 
-  Plus
+  Plus,
+  LogOut
 } from "lucide-react";
 
 const navItems = [
@@ -16,7 +17,7 @@ const navItems = [
 //   { name: "Comming Soon", icon: Clock, view: "commingSoon" }, 
 ];
 
-export default function Sidebar({ activeView, setActiveView }) {
+export default function Sidebar({ activeView, setActiveView, onLogout }) {
   const isActive = (view) => activeView === view;
 
   return (
@@ -61,6 +62,17 @@ export default function Sidebar({ activeView, setActiveView }) {
           </button>
         </div>
       </nav>
+
+      {/* Logout Button at Bottom */}
+      <div className="p-4 border-t border-gray-200">
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Logout
+        </button>
+      </div>
     </div>
   );
 }

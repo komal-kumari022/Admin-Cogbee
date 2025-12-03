@@ -99,7 +99,8 @@ const AddQuestionPage = ({ skillName = 'js.java', onBack = () => alert('Back cli
     };
 
     const handleQuestionCreatedOrUpdated = (updatedQuestion) => {
-        if (updatedQuestion.id) {
+        const exists = questions.some(q => q.id === updatedQuestion.id);
+        if (exists) {
             // Update logic: Find and replace the existing question
             setQuestions(prevQuestions =>
                 prevQuestions.map(q => (q.id === updatedQuestion.id ? updatedQuestion : q))
@@ -110,14 +111,29 @@ const AddQuestionPage = ({ skillName = 'js.java', onBack = () => alert('Back cli
             );
         } else {
             // Creation logic: Add a new question
-            const newQuestionWithId = { ...updatedQuestion, id: Date.now() };
-            setQuestions(prevQuestions => [newQuestionWithId, ...prevQuestions]); 
+            setQuestions(prevQuestions => [updatedQuestion, ...prevQuestions]); 
+            // Auto-select the new question
+            setSelectedQuestions(prevSelected => [...prevSelected, updatedQuestion]);
         }
         
         closeCreateModal(); 
     };
     // -----------------------------------------------------------
 
+
+    // Helper function for type abbreviation
+    const getTypeAbbrev = (type) => {
+        const map = {
+            'Multiple Choice (Single)': 'MSQ',
+            'Multiple Choice (Multiple)': 'MCQ',
+            'True/False (Multiple)': 'TFQ',
+            'Fill Blanks': 'FBQ',
+            'List Choice': 'LCQ',
+            'Text/Essay': 'ESS',
+            'Coding': 'COD'
+        };
+        return map[type] || type.substring(0, 3).toUpperCase();
+    };
 
     // --- Component Definitions ---
 
@@ -138,7 +154,7 @@ const AddQuestionPage = ({ skillName = 'js.java', onBack = () => alert('Back cli
                     <div>
                         <p className="text-sm font-medium text-gray-900">{question.questionName}</p>
                         <div className="flex space-x-2 text-xs text-gray-500 mt-1">
-                            <span className="bg-gray-200 px-2 py-0.5 rounded">{question.questionType.substring(0, 3).toUpperCase()}</span>
+                            <span className="bg-gray-200 px-2 py-0.5 rounded">{getTypeAbbrev(question.questionType)}</span>
                             <span className="bg-gray-200 px-2 py-0.5 rounded">{question.difficulty}</span>
                             <span className="text-gray-700">{question.questionScore} pts</span>
                         </div>
@@ -157,63 +173,69 @@ const AddQuestionPage = ({ skillName = 'js.java', onBack = () => alert('Back cli
     };
 
     // ⭐ NEW COMPONENT: Renders a selected question item (Right Panel)
-const SelectedQuestionItem = ({ question }) => (
-    <div className="p-3 border border-blue-400 rounded-md bg-blue-50 mb-3 relative">
-        <button 
-            onClick={() => handleRemoveSelectedQuestion(question.id)}
-            className="absolute top-2 right-2 text-gray-400 hover:text-red-600 transition"
-            title="Remove from test"
-        >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-        </button>
+    const SelectedQuestionItem = ({ question, index }) => {
+        const durationInSeconds = question.questionDuration || 0;
+        const hours = Math.floor(durationInSeconds / 3600);
+        const minutes = Math.floor((durationInSeconds % 3600) / 60);
 
-        <div className="flex items-start space-x-2 pr-6">
-            <input type="checkbox" checked disabled className="h-4 w-4 mt-1 text-blue-600 border-blue-300 rounded" />
+        return (
+            <div className="p-3 border border-blue-400 rounded-md bg-blue-50 mb-3 relative">
+                <button 
+                    onClick={() => handleRemoveSelectedQuestion(question.id)}
+                    className="absolute top-2 right-2 text-gray-400 hover:text-red-600 transition"
+                    title="Remove from test"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
 
-            <div className="w-full">
-                {/* Question Title */}
-                <p className="text-sm font-medium text-gray-900 mb-2">
-                    {question.questionName}
-                </p>
+                <div className="flex items-start space-x-2 pr-6">
+                    <input type="checkbox" checked disabled className="h-4 w-4 mt-1 text-blue-600 border-blue-300 rounded" />
 
-                {/* Vertical Details Section */}
-                <div className="flex flex-col space-y-2 text-xs text-gray-600">
+                    <div className="w-full">
+                        {/* Header with Q number, type, difficulty */}
+                        <div className="flex items-center mb-2">
+                            <span className="text-xs font-medium text-gray-500 mr-2">Q{index + 1}</span>
+                            <span className="bg-blue-200 px-2 py-0.5 rounded font-semibold text-xs mr-2">
+                                {getTypeAbbrev(question.questionType)}
+                            </span>
+                            <span className="text-xs bg-blue-100 px-2 py-0.5 rounded">
+                                {question.difficulty}
+                            </span>
+                        </div>
 
-                    {/* Tags row */}
-                    <div className="flex space-x-2">
-                        <span className="bg-blue-200 px-2 py-0.5 rounded font-semibold">
-                            {question.questionType.substring(0, 3).toUpperCase()}
-                        </span>
+                        {/* Question Title */}
+                        <p className="text-sm font-medium text-gray-900 mb-2">
+                            {question.questionName}
+                        </p>
 
-                        <span className="bg-blue-100 px-2 py-0.5 rounded">
-                            {question.difficulty}
-                        </span>
+                        {/* Vertical Details Section */}
+                        <div className="flex flex-col space-y-2 text-xs text-gray-600">
+
+                            {/* Points row */}
+                            <div className="flex items-center space-x-2">
+                                <span>Points:</span>
+                                <span className="font-bold text-base text-blue-700">
+                                    {question.questionScore}
+                                </span>
+                            </div>
+
+                            {/* Time Limit row */}
+                            <div className="flex items-center space-x-2 text-sm">
+                                <span className="text-gray-500">Question Time Limit:</span>
+                                <input type="number" defaultValue={hours} min="0"
+                                    className="w-12 p-1 text-center border rounded" /> hrs
+                                <input type="number" defaultValue={minutes} min="0"
+                                    className="w-12 p-1 text-center border rounded ml-1" /> mins
+                            </div>
+
+                        </div>
                     </div>
-
-                    {/* Points row */}
-                    <div className="flex items-center space-x-2">
-                        <span>Points:</span>
-                        <span className="font-bold text-base text-blue-700">
-                            {question.questionScore}
-                        </span>
-                    </div>
-
-                    {/* Time Limit row */}
-                    <div className="flex items-center space-x-2 text-sm">
-                        <span className="text-gray-500">Time Limit:</span>
-                        <input type="number" defaultValue="0" min="0"
-                            className="w-12 p-1 text-center border rounded" /> hrs
-                        <input type="number" defaultValue="0" min="0"
-                            className="w-12 p-1 text-center border rounded" /> mins
-                    </div>
-
                 </div>
             </div>
-        </div>
-    </div>
-);
+        );
+    };
 
     // -----------------------------------------------------------
 
@@ -289,8 +311,8 @@ const SelectedQuestionItem = ({ question }) => (
                     ) : (
                         // ⭐ Render list of selected questions
                         <div className="space-y-3">
-                            {selectedQuestions.map((q) => (
-                                <SelectedQuestionItem key={q.id} question={q} />
+                            {selectedQuestions.map((q, idx) => (
+                                <SelectedQuestionItem key={q.id} question={q} index={idx} />
                             ))}
                         </div>
                     )}
